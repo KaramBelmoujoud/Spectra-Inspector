@@ -33,6 +33,8 @@ def make_panel(ctx):
         ctx.run_in_driver(lambda: node.label(), lambda text: label.setText(f"Selected: {text}"))
 
     ctx.on("element_selected", on_selected)
+    if ctx.current_node() is not None:  # an element may already be selected when the plugin is enabled
+        on_selected(ctx.current_node())
     return label
 
 
