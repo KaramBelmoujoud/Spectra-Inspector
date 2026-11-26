@@ -7,11 +7,11 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .backends.web import WebBackend, WebPage
 from .core.engine import Engine
-from .core.node import Node
+from .core.node import Backend, Node
 
 IS_WIN = sys.platform == "win32"
 
@@ -27,6 +27,7 @@ class Service:
         self.own_pid = os.getpid()
         self.prefer_web = True
         self.prefer_java = True
+        self.extra_backends: List[Backend] = []  # added by plugins (spectra.plugins ctx.add_backend)
         self._metrics: Dict[str, Tuple[float, dict]] = {}
 
     def init(self):
@@ -144,6 +145,13 @@ class Service:
                     return node
             except Exception:  # noqa: BLE001
                 pass
+        for backend in list(self.extra_backends):  # plugin back ends get a chance before UI Automation
+            try:
+                node = backend.from_point(x, y)
+            except Exception:  # noqa: BLE001
+                node = None
+            if node is not None:
+                return node
         if self.uia is not None:
             return self.uia.from_point(x, y)
         return None
@@ -155,4 +163,5 @@ class Service:
         out.append(self.web.root())
         if self.java is not None:
             out.append(self.java.root())
+        out.extend(b.root() for b in self.extra_backends)
         return out

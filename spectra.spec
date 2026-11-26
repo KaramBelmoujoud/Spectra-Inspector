@@ -7,7 +7,9 @@ import shutil
 
 from PyInstaller.utils.hooks import collect_submodules
 
-hidden = collect_submodules("comtypes") + ["comtypes.gen", "comtypes.gen.UIAutomationClient"]
+# built-in plugins are found at run time (pkgutil), so PyInstaller must be told to include them
+hidden = (collect_submodules("comtypes") + ["comtypes.gen", "comtypes.gen.UIAutomationClient"]
+          + collect_submodules("spectra.builtin_plugins") + collect_submodules("spectra.plugins"))
 
 a = Analysis(["spectra_launcher.py"], pathex=["."], hiddenimports=hidden,
              excludes=["tkinter", "PySide6.QtWebEngineCore", "PySide6.QtQml", "PySide6.Qt3DCore"])

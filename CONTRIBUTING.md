@@ -7,8 +7,8 @@ Thanks for helping! Bug reports, ideas, documentation fixes and pull requests ar
 Spectra needs Windows 10/11 and a 64-bit Python 3.10 or newer.
 
 ```powershell
-git clone https://github.com/OWNER/spectra-inspector.git
-cd spectra-inspector
+git clone https://github.com/KaramBelmoujoud/Spectra-Inspector.git
+cd Spectra-Inspector
 py -3 -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"
 .venv\Scripts\python -m spectra          # start the app
@@ -35,6 +35,12 @@ Please add a test for any behaviour you change where that's practical, and keep 
 * Anything that talks to UI Automation, the DevTools protocol or the Java Access Bridge runs on the driver thread (`spectra/driver.py`). GUI code submits work with `driver.submit(...)` and gets results back through `UiBridge`; it never calls COM objects directly.
 * Never block the GUI thread on the driver (`driver.call`) from Qt code: UI Automation may need the GUI thread to answer for Spectra's own windows.
 
+## Plugins
+
+Many features fit better in a plugin than in the core: exporters for another tool, selector formats, actions, panels, property checks. Plugins use only the public API in `spectra/plugins/`; see [docs/plugins.md](docs/plugins.md). Built-in plugins live in `spectra/builtin_plugins/` and are a good place for features most users want.
+
+Changes to `spectra/plugins/` are API changes: keep them additive (new methods, events or optional arguments) and bump the minor number of `API_VERSION`. Anything incompatible needs a new major API version and a note in the changelog.
+
 ## Adding a back end
 
 A back end makes a new UI technology inspectable. It lives in `spectra/backends/` and implements the interface in `spectra/core/node.py`:
@@ -42,7 +48,7 @@ A back end makes a new UI technology inspectable. It lives in `spectra/backends/
 * `Backend` (one per technology): `tech` (the selector prefix, such as `"uia"`), `title`, `root()`, `from_point(x, y)` and `available()`.
 * `Node` (one per element): `key()` (a stable identity), `role()`, `selector_attrs()`, `suggested_attrs(is_top)`, `properties()`, `label()`, `rect()`, `children()` and `parent()`. Optionally `find(step, deep, budget)` as a fast search path (return `None` to let the engine walk `children()`).
 
-Register it in `Service.init()` (`spectra/service.py`), route on-screen picking to it in `Service.element_at()` if it applies, and add its prefix to `TECHS` in `spectra/core/selector.py`. The search engine, selector generator, editor, validation and code views then work without further changes.
+A back end can be added from a plugin with `ctx.add_backend(...)`, which registers it with the engine, the UI tree, picking and the selector parser. To make it part of the core instead, register it in `Service.init()` (`spectra/service.py`), route on-screen picking to it in `Service.element_at()` if it applies, and add its prefix to `TECHS` in `spectra/core/selector.py`. The search engine, selector generator, editor, validation and code views then work without further changes.
 
 ## Pull requests
 

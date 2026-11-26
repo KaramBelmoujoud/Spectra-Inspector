@@ -7,8 +7,8 @@ import socket
 import time
 from typing import List, Optional
 
-from PySide6.QtCore import QSettings, Qt, QTimer
-from PySide6.QtGui import QAction, QFont, QGuiApplication, QKeySequence
+from PySide6.QtCore import QSettings, Qt, QTimer, QUrl
+from PySide6.QtGui import QAction, QDesktopServices, QFont, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDockWidget, QFileDialog, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox,
@@ -29,6 +29,7 @@ OPS = ["=", "*=", "^=", "$=", "~=", "?=", "!="]
 NODE_ROLE = Qt.UserRole
 LOADED_ROLE = Qt.UserRole + 1
 MAX_CHILDREN_SHOWN = 3000
+PLUGIN_DOCS = "https://github.com/KaramBelmoujoud/Spectra-Inspector/blob/main/docs/plugins.md"
 PICK_HINT = "Click (or press Ctrl) to capture  ·  Esc or right-click to cancel"
 
 
@@ -76,6 +77,11 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._build_toolbar()
+        self._build_menus()
+        from ..plugin_manager import PluginManager
+        from .plugin_host import GuiHost
+        self.plugins = PluginManager(GuiHost(self))
+        self.plugins.start()
         self.pick_timer = QTimer(self, interval=30, timeout=self._pick_tick)
         self.focus_timer = QTimer(self, interval=700, timeout=self._focus_tick)
         # live validation only updates the status line; frames are drawn on Validate / Highlight
@@ -259,6 +265,8 @@ class MainWindow(QMainWindow):
             b.clicked.connect(lambda _=False, n=name: self.run_action(n))
             row2.addWidget(b)
         lay.addLayout(row2)
+        self.plugin_actions_row = QHBoxLayout()
+        lay.addLayout(self.plugin_actions_row)
         note = QLabel("These act on the real application. Click and Type text move the mouse / send keys.")
         note.setStyleSheet("color: #8a8d94;")
         lay.addWidget(note)
@@ -338,6 +346,7 @@ class MainWindow(QMainWindow):
             self.log("Driver start-up error:\n" + self.driver.init_error)
         for tech, err in self.service.errors.items():
             self.log(f"[{tech}] not available: {err}")
+        self.plugins.emit("app_started")
 
     def log(self, text: str):
         self.logbox.appendPlainText(time.strftime("%H:%M:%S  ") + text)
@@ -355,6 +364,7 @@ class MainWindow(QMainWindow):
             self.restoreState(s.value("state"))
 
     def closeEvent(self, ev):
+        self.plugins.emit("app_closing")
         s = QSettings("Spectra", "Inspector")
         s.setValue("geometry", self.saveGeometry())
         s.setValue("state", self.saveState())
@@ -364,6 +374,7 @@ class MainWindow(QMainWindow):
             from ..backends import win32
             win32.remove_all_hooks()  # never leave a global mouse hook behind
         self.hl.hide()
+        self.plugins.stop()
         super().closeEvent(ev)
 
     # ================================================================== tree
@@ -477,6 +488,11 @@ class MainWindow(QMainWindow):
         m.addAction("Copy label", lambda: QGuiApplication.clipboard().setText(item.text(0)))
         if node.tech == "web":
             m.addAction("Pick in this tab (browser inspect mode)", lambda: self._start_page_inspect(node))
+        actions = self.plugins.registry.of("actions")
+        if actions:
+            sub = m.addMenu("Plugin actions")
+            for act in actions:
+                sub.addAction(act["name"], lambda a=act, n=node: self._run_plugin_action(a, n))
         m.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _reload_item(self, item):
@@ -545,7 +561,7 @@ class MainWindow(QMainWindow):
             chain = node.ancestry()
             data = [(n, n.role(), dict(n.selector_attrs()), n.label(), n.suggested_attrs(is_top=(i == 0)))
                     for i, n in enumerate(chain)]
-            props = node.properties()
+            props = list(node.properties()) + self.plugins.extra_properties(node)
             rect = node.rect()
             return chain, data, props, rect, node.label()
 
@@ -569,6 +585,7 @@ class MainWindow(QMainWindow):
             if reveal:
                 self.reveal(chain)
             self._generate(node, seq)
+            self.plugins.emit("element_selected", node)
 
         self.driver.submit(gather, self.ui.wrap(gathered), self._err("Reading element"), coalesce="select")
 
@@ -603,6 +620,7 @@ class MainWindow(QMainWindow):
             self._render_selector(validate=False)
             self._show_result(res)
             self.code.setPlainText(code)
+            self.plugins.emit("selector_validated", sel.to_text(), res)
         self.driver.submit(job, self.ui.wrap(done), self._err("Generating selector"), coalesce="generate")
 
     def regenerate(self):
@@ -792,6 +810,7 @@ class MainWindow(QMainWindow):
         def done(r):
             res, rects = r
             self._show_result(res)
+            self.plugins.emit("selector_validated", text, res)
             if highlight and rects:
                 cur_key = self.current.key() if self.current is not None else None
                 items = []
@@ -879,12 +898,14 @@ class MainWindow(QMainWindow):
                 self.showMinimized()
             self._start_click_catcher()
             self.pick_timer.start()
+            self.plugins.emit("pick_started")
         else:
             self._stop_click_catcher()
             self.pick_timer.stop()
             self.hl.hide()
             self._restore_after_pick()
             self.statusBar().showMessage("Picking cancelled", 2000)
+            self.plugins.emit("pick_finished", None)
 
     # ---- click to capture: a global mouse hook swallows the click so the target app never gets it
     def _start_click_catcher(self):
@@ -934,6 +955,7 @@ class MainWindow(QMainWindow):
         self._restore_after_pick()
         self.statusBar().showMessage(f"Captured {node.label()}", 4000)
         self.select_node(node)
+        self.plugins.emit("pick_finished", node)
 
     def _restore_after_pick(self):
         state = getattr(self, "_state_before_pick", None)
@@ -1218,7 +1240,8 @@ class MainWindow(QMainWindow):
 
     # ================================================================== code generation
     def _code_for(self, node: Node, sel: Selector) -> str:
-        """Runs on the driver thread."""
+        """Runs on the driver thread. The Spectra selector and API are built in; everything else
+        (Playwright, Selenium, Robot Framework, pywinauto, other formats...) comes from plugins."""
         text = sel.to_text()
         lines = ["# Spectra selector", text, "",
                  "# Python, with the Spectra API (spectra/api.py)",
@@ -1229,10 +1252,7 @@ class MainWindow(QMainWindow):
         if node.tech == "web":
             from ..core.webpaths import css_path, xpath
             css, xp = css_path(node), xpath(node)
-            lines += ["# CSS", css, "", "# XPath", xp, "",
-                      "# Playwright (Python)", f"page.locator({json.dumps('css=' + css)}).click()", "",
-                      "# Selenium (Python)",
-                      f"driver.find_element(By.CSS_SELECTOR, {json.dumps(css)}).click()", ""]
+            lines += ["# CSS", css, "", "# XPath", xp, ""]
             try:
                 n_css = node.page.count_css(css) if not css.startswith("/*") else None
                 n_xp = node.page.count_xpath(xp) if "/*" not in xp else None
@@ -1240,28 +1260,113 @@ class MainWindow(QMainWindow):
                                 f"XPath matches: {n_xp if n_xp is not None else 'n/a (shadow/frame)'}")
             except Exception:  # noqa: BLE001
                 pass
-        elif node.tech == "uia":
-            chain = node.ancestry()
-            top = chain[0]
-            ta = top.selector_attrs()
-            na = node.selector_attrs()
-            args_top = []
-            if ta.get("name"):
-                args_top.append(f"title={ta['name']!r}")
-            if ta.get("class"):
-                args_top.append(f"class_name={ta['class']!r}")
-            args = []
-            if na.get("automationid"):
-                args.append(f"auto_id={na['automationid']!r}")
-            if na.get("name"):
-                args.append(f"title={na['name']!r}")
-            args.append(f"control_type={node.role()!r}")
-            lines += ["# pywinauto (UIA backend)",
-                      "from pywinauto import Desktop",
-                      f"win = Desktop(backend='uia').window({', '.join(args_top)})",
-                      (f"el = win.child_window({', '.join(args)})" if node is not top else "el = win"),
-                      "el.wait('exists', timeout=10)", ""]
+        for title, body in self.plugins.export_sections(node, sel):
+            lines += [f"# {title}", body, ""]
         return "\n".join(lines)
+
+    # ================================================================== plugins
+    def _build_menus(self):
+        mb = self.menuBar()
+        self.view_menu = mb.addMenu("&View")
+        self.export_menu = mb.addMenu("&Export")
+        pm = mb.addMenu("&Plugins")
+        pm.addAction("Plugin Manager…", self.show_plugin_manager)
+        pm.addAction("Open plugins folder", self._open_plugins_folder)
+        pm.addSeparator()
+        pm.addAction("Writing plugins (docs)", lambda: QDesktopServices.openUrl(QUrl(PLUGIN_DOCS)))
+        self._plugin_shortcuts: List[QAction] = []
+        self._rebuild_view_menu()
+
+    def _rebuild_view_menu(self):
+        if not hasattr(self, "view_menu"):
+            return
+        self.view_menu.clear()
+        for dock in self.findChildren(QDockWidget):
+            self.view_menu.addAction(dock.toggleViewAction())
+
+    def _plugins_changed(self, kind: str):
+        if kind == "actions":
+            self._rebuild_plugin_actions()
+        elif kind in ("exporters", "formats"):
+            self._rebuild_export_menu()
+            if self.current is not None:
+                self.regenerate()
+        elif kind == "providers" and self.current is not None:
+            self.select_node(self.current, reveal=False, flash=False)
+        elif kind == "backends":
+            self.load_roots()
+
+    def _rebuild_plugin_actions(self):
+        while self.plugin_actions_row.count():
+            it = self.plugin_actions_row.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        for a in self._plugin_shortcuts:
+            self.removeAction(a)
+        self._plugin_shortcuts = []
+        actions = self.plugins.registry.of("actions")
+        if actions:
+            self.plugin_actions_row.addWidget(QLabel("Plugins:"))
+        for act in actions:
+            b = QPushButton(act["name"])
+            if act.get("shortcut"):
+                b.setToolTip(act["shortcut"])
+                qa = QAction(act["name"], self, shortcut=QKeySequence(act["shortcut"]))
+                qa.triggered.connect(lambda _=False, a=act: self._run_plugin_action(a))
+                self.addAction(qa)
+                self._plugin_shortcuts.append(qa)
+            b.clicked.connect(lambda _=False, a=act: self._run_plugin_action(a))
+            self.plugin_actions_row.addWidget(b)
+        self.plugin_actions_row.addStretch(1)
+
+    def _run_plugin_action(self, action: dict, node: Optional[Node] = None):
+        node = node or self.current
+        if node is None:
+            self.statusBar().showMessage("Select an element first", 3000)
+            return
+        self.driver.submit(lambda: self.plugins.run_action(action, node),
+                           self.ui.wrap(lambda msg: self.statusBar().showMessage(msg or "", 4000)),
+                           self._err(action["name"]))
+
+    def _rebuild_export_menu(self):
+        self.export_menu.clear()
+        items = [("format", f) for f in self.plugins.registry.of("formats")] + \
+                [("exporter", e) for e in self.plugins.registry.of("exporters")]
+        if not items:
+            self.export_menu.addAction("No exporters (enable some in Plugins > Plugin Manager)").setEnabled(False)
+        for kind, obj in items:
+            self.export_menu.addAction(f"Copy as {obj.name}", lambda k=kind, o=obj: self._export_current(k, o))
+
+    def _export_current(self, kind: str, obj):
+        node = self.current
+        text = self.selector_text()
+        if node is None or not text:
+            self.statusBar().showMessage("Select an element first", 3000)
+            return
+
+        def job():
+            from ..core.selector import parse
+            if not obj.applies_to(node):
+                return None
+            if kind == "format":
+                return obj.from_selector(parse(text), node)
+            return obj.export(node, text)
+
+        def done(out):
+            if out is None:
+                self.statusBar().showMessage(f"{obj.name} doesn't apply to this element", 4000)
+                return
+            QGuiApplication.clipboard().setText(out)
+            self.statusBar().showMessage(f"Copied as {obj.name}", 3000)
+        self.driver.submit(job, self.ui.wrap(done), self._err(f"Export {obj.name}"))
+
+    def show_plugin_manager(self):
+        from .plugin_dialog import PluginManagerDialog
+        PluginManagerDialog(self.plugins, self).exec()
+
+    def _open_plugins_folder(self):
+        os.makedirs(self.plugins.plugin_dir, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(self.plugins.plugin_dir))
 
     # ================================================================== files and help
     def open_selector(self):
