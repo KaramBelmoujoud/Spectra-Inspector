@@ -109,6 +109,27 @@ for button in s.find_all('web:tab[title="Shop"] >> button[class="add"]'):
 
 `find` waits up to `timeout` seconds; elements offer `click`, `type_text`, `set_value`, `invoke`, `focus`, `get(attr)`, `rect` and `properties()`.
 
+## Plugins
+
+Spectra can be extended with plugins, much like add-ons in Blender: new code exporters, selector formats, actions, panels, property checks, or whole new UI technologies. A plugin is a Python file that imports the versioned `spectra.plugins` API:
+
+```python
+from spectra.plugins import PluginInfo
+
+PLUGIN = PluginInfo(id="hello", name="Hello", version="1.0", author="You")
+
+def register(ctx):
+    ctx.add_action("Say hello", lambda node, ctx: f"Hello {node.label()}")
+```
+
+Drop it in `%APPDATA%\Spectra\plugins\`, or `pip install` a package that declares a `spectra_inspector.plugins` entry point, and enable it in **Plugins > Plugin Manager**. The Playwright, Selenium, Robot Framework and pywinauto exporters, an XPath-like format, an accessibility summary, *Copy as JSON* and a **Python console** panel are built-in plugins written the same way.
+
+> Plugins run arbitrary Python code with your permissions. Only install plugins you trust.
+
+Read [docs/plugins.md](docs/plugins.md) for the guide and API reference, and [examples/plugins/](examples/plugins/) for a minimal plugin and a pip-installable template.
+
+![The Plugin Manager](docs/images/plugin-manager.png)
+
 ## Building the exe
 
 ```powershell
@@ -141,9 +162,13 @@ spectra/service.py         point-to-element routing across technologies
 spectra/driver.py          single background thread for all automation calls
 spectra/gui/               PySide6 interface and highlight overlay
 spectra/api.py             scripting API
+spectra/plugins/           the public plugin API (spectra.plugins)
+spectra/plugin_manager.py  plugin discovery, loading, isolation and cleanup
+spectra/builtin_plugins/   plugins that ship with Spectra (exporters, console, ...)
 tests/                     unit tests, a live Chromium test and live Windows tests
 demo/                      a demo web page and the script that records the demo video
-docs/images/               README screenshots
+docs/                      plugin guide (plugins.md) and README screenshots
+examples/plugins/          a minimal plugin and a pip-installable plugin template
 ```
 
 ## Roadmap
@@ -152,7 +177,7 @@ docs/images/               README screenshots
 * Firefox DOM access (today Firefox is inspected through UI Automation)
 * SAP GUI scripting back end
 * An event recorder that turns clicks and typing into a script
-* A plugin interface for third-party back ends
+* More built-in plugins (Gherkin steps, test-data capture) and a plugin index
 
 ## Known limits
 
