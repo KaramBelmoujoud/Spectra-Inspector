@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spectra-plugin-template"          # rename: e.g. spectra-plugin-mytool
+version = "0.1.0"
+description = "Template for a pip-installable Spectra Inspector plugin."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"                    # your choice
+dependencies = ["spectra-inspector>=0.2,<1"]
+
+# This is what makes Spectra find the plugin: the entry point name is the plugin id,
+# the value is the module that defines PLUGIN and register(ctx).
+[project.entry-points."spectra_inspector.plugins"]
+markdown_note = "spectra_plugin_template"
+
+[tool.setuptools.packages.find]
+where = ["src"]
