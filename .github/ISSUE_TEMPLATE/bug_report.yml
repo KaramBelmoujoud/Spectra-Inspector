@@ -1,0 +1,53 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a problem. Please don't paste passwords, tokens or other private data from the apps you inspected.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start Spectra
+        2. Press F3 and click ...
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: selector
+    attributes:
+      label: Selector (if relevant)
+      placeholder: 'uia:Window[name="..."] >> Button[name="..."]'
+  - type: dropdown
+    id: tech
+    attributes:
+      label: Technology
+      multiple: true
+      options: [Desktop app (UI Automation), Web page (DevTools), Java app, Electron / WebView2, Other]
+  - type: input
+    id: version
+    attributes:
+      label: Spectra version
+      description: Shown in the window title, or `python -c "import spectra; print(spectra.__version__)"`
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Windows, Python and browser versions
+      placeholder: Windows 11 24H2, Python 3.12.4, Chrome 131
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Text from the Log tab or `%LOCALAPPDATA%\Spectra\spectra.log`
+      render: text

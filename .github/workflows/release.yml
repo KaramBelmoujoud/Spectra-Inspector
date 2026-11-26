@@ -1,0 +1,41 @@
+name: Release
+
+# Push a tag such as v0.1.0 to build the Windows executable and attach it to a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Pre-generate the UI Automation COM wrappers
+        run: python -c "import comtypes.client as c; c.GetModule('UIAutomationCore.dll')"
+      - name: Build with PyInstaller
+        run: pyinstaller --noconfirm spectra.spec
+      - name: Check the license files are in the build
+        shell: pwsh
+        run: |
+          foreach ($f in 'LICENSE','NOTICE','THIRD_PARTY_NOTICES.md','licenses/LGPL-3.0.txt','licenses/GPL-3.0.txt') {
+            if (-not (Test-Path "dist/SpectraInspector/$f")) { throw "missing $f in the build" }
+          }
+      - name: Zip
+        shell: pwsh
+        run: |
+          $zip = "SpectraInspector-${{ github.ref_name }}-win64.zip"
+          Compress-Archive -Path dist/SpectraInspector -DestinationPath $zip
+          "ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Create the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" "$env:ZIP" --title "Spectra Inspector ${{ github.ref_name }}" --generate-notes

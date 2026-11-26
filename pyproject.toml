@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spectra-inspector"
+dynamic = ["version"]
+description = "UI element inspector for Windows desktop, Java and web apps, with a readable selector language and a Python API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
+authors = [{ name = "Spectra Inspector contributors" }]
+keywords = ["ui-automation", "inspector", "selectors", "accessibility", "uia", "devtools", "rpa", "testing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "PySide6>=6.5",
+    "comtypes>=1.2; sys_platform == 'win32'",
+    "websocket-client>=1.6",
+    "Pillow>=10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pyinstaller>=6", "ruff>=0.5"]
+
+[project.gui-scripts]
+spectra-inspector = "spectra.app:main"
+
+# [project.urls]  TODO(repo): fill in once the GitHub repository exists
+# Homepage = "https://github.com/OWNER/spectra-inspector"
+# Issues = "https://github.com/OWNER/spectra-inspector/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "spectra.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["spectra*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:faulthandler"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["demo"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = [
+    "E501",   # long lines are allowed where they read better
+    "E702",   # several short statements on one line (used in a few places on purpose)
+    "E731",   # small lambdas assigned to names
+    "B008",
+    "B023",   # closures over loop variables are intentional in the GUI code
+    "B905",   # zip() over lists of different lengths on purpose (e.g. first 30 matches)
+    "E741",   # l, t, r, b for rectangle edges
+]

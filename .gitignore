@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.python-version
+
+# Tests, coverage, linters
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Build output (spectra.spec itself is tracked)
+build/
+dist/
+*.manifest
+
+# Demo recordings and their working files
+demo/*.mp4
+demo/chapters/
+
+# Logs and files the app saves while you use it
+*.log
+*.sel
+element.png
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*~
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+$RECYCLE.BIN/
