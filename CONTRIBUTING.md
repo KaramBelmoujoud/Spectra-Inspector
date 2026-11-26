@@ -7,8 +7,8 @@ Thanks for helping! Bug reports, ideas, documentation fixes and pull requests ar
 Spectra needs Windows 10/11 and a 64-bit Python 3.10 or newer.
 
 ```powershell
-git clone https://github.com/OWNER/spectra-inspector.git
-cd spectra-inspector
+git clone https://github.com/KaramBelmoujoud/Spectra-Inspector.git
+cd Spectra-Inspector
 py -3 -m venv .venv
 .venv\Scripts\python -m pip install -e ".[dev]"
 .venv\Scripts\python -m spectra          # start the app

@@ -1,7 +1,6 @@
-<!-- TODO(repo): replace OWNER/spectra-inspector in the badge and download URLs once the GitHub repository exists -->
 # Spectra Inspector
 
-[![CI](https://github.com/OWNER/spectra-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/spectra-inspector/actions/workflows/ci.yml)
+[![CI](https://github.com/KaramBelmoujoud/Spectra-Inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/KaramBelmoujoud/Spectra-Inspector/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078d6)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
@@ -47,13 +46,13 @@ Spectra runs on Windows 10 and 11 with a 64-bit Python 3.10 or newer.
 **With pip:**
 
 ```powershell
-git clone https://github.com/OWNER/spectra-inspector.git
-cd spectra-inspector
+git clone https://github.com/KaramBelmoujoud/Spectra-Inspector.git
+cd Spectra-Inspector
 python -m pip install .
 spectra-inspector
 ```
 
-**Standalone .exe:** download the zip from the [Releases](https://github.com/OWNER/spectra-inspector/releases) page, unzip it anywhere and run `SpectraInspector.exe`. No Python needed. To build it yourself, see [Building the exe](#building-the-exe).
+**Standalone .exe:** download the zip from the [Releases](https://github.com/KaramBelmoujoud/Spectra-Inspector/releases) page, unzip it anywhere and run `SpectraInspector.exe`. No Python needed. To build it yourself, see [Building the exe](#building-the-exe).
 
 ## Quick start
 
