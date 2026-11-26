@@ -41,9 +41,9 @@ dev = ["pytest>=7", "pyinstaller>=6", "ruff>=0.5"]
 [project.gui-scripts]
 spectra-inspector = "spectra.app:main"
 
-# [project.urls]  TODO(repo): fill in once the GitHub repository exists
-# Homepage = "https://github.com/OWNER/spectra-inspector"
-# Issues = "https://github.com/OWNER/spectra-inspector/issues"
+[project.urls]
+Homepage = "https://github.com/KaramBelmoujoud/Spectra-Inspector"
+Issues = "https://github.com/KaramBelmoujoud/Spectra-Inspector/issues"
 
 [tool.setuptools.dynamic]
 version = { attr = "spectra.__version__" }

@@ -29,4 +29,4 @@ First public version.
 * Browser debugging ports are probed in parallel with a short timeout, so start-up no longer waits about 12 s when no browser is running.
 * Tree selection is debounced and stale work is dropped, so arrow-keying through the tree stays responsive.
 
-[0.1.0]: https://github.com/OWNER/spectra-inspector/releases/tag/v0.1.0
+[0.1.0]: https://github.com/KaramBelmoujoud/Spectra-Inspector/releases/tag/v0.1.0
