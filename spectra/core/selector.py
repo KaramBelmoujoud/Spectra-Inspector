@@ -29,7 +29,15 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-TECHS = ("uia", "web", "java")
+TECHS = ["uia", "web", "java"]  # plugins add their back ends' prefixes with register_tech()
+
+
+def register_tech(tech: str):
+    """Allow ``tech:`` as a selector prefix (called when a plugin adds a back end)."""
+    if not re.fullmatch(r"[a-z][a-z0-9_]*", tech or ""):
+        raise ValueError(f"invalid technology prefix {tech!r} (use lowercase letters, digits and _)")
+    if tech not in TECHS:
+        TECHS.append(tech)
 OPS = ("!=", "*=", "^=", "$=", "~=", "?=", "=")
 
 
@@ -258,7 +266,7 @@ class _Parser:
     def step(self, first: bool) -> Step:
         st = Step()
         # optional tech prefix
-        m = re.match(r"(uia|web|java):(?!\()", self.s[self.i:])
+        m = re.match(r"(" + "|".join(map(re.escape, TECHS)) + r"):(?!\()", self.s[self.i:])
         if m:
             if not first:
                 self.error("a technology prefix is only allowed on the first step")
