@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - unreleased
+
+Plugins and extensibility.
+
+### Added
+
+* **Plugins.** A versioned public API, `spectra.plugins` (plugin API 1.0): `PluginInfo`, `register(ctx)` / `unregister(ctx)`, and a `PluginContext` to add exporters, selector formats, actions, dockable panels, property providers, UI technology back ends and event handlers (`element_selected`, `selector_validated`, `pick_started`, `pick_finished`, `app_started`, `app_closing`), with per-plugin settings and thread helpers. Plugins built for another major API version are refused with a clear message.
+* **Plugin manager:** plugins are found in Spectra itself, in `%APPDATA%\Spectra\plugins` (files or packages) and in installed packages (`spectra_inspector.plugins` entry points). They can be enabled, disabled and reloaded at run time; a failing plugin is reported in the Log tab and the Plugin Manager and never crashes the app; everything a plugin added is removed when it is disabled.
+* **Plugins > Plugin Manager** dialog with a security warning, *Install from file…*, *Reload* and *Open plugins folder*. Spectra asks before it enables a third-party plugin for the first time.
+* **View**, **Export** and **Plugins** menus. The Export menu copies the selected element as any exporter or selector format.
+* Built-in plugins: Playwright, Selenium and Robot Framework exporters; pywinauto exporter; an XPath-like format for desktop selectors; an *Accessibility summary* in Properties with simple warnings; a *Copy as JSON* action (Ctrl+Shift+J); and a **Python console** panel with `find()`, `find_all()`, `highlight()` and the selected element pre-loaded.
+* `examples/plugins/`: a minimal plugin and a pip-installable plugin template. `docs/plugins.md`: guide and API reference.
+
+### Changed
+
+* The Playwright, Selenium and pywinauto snippets of the *Locators & code* tab now come from built-in plugins (they can be switched off).
+* Plugin back ends take part in on-screen picking, the UI tree and the selector parser (new technology prefixes).
+
 ## [0.1.0] - 2026-11-26
 
 First public version.
@@ -29,4 +47,5 @@ First public version.
 * Browser debugging ports are probed in parallel with a short timeout, so start-up no longer waits about 12 s when no browser is running.
 * Tree selection is debounced and stale work is dropped, so arrow-keying through the tree stays responsive.
 
-[0.1.0]: https://github.com/OWNER/spectra-inspector/releases/tag/v0.1.0
+[0.2.0]: https://github.com/KaramBelmoujoud/Spectra-Inspector/compare/v0.1.0...feature/plugins
+[0.1.0]: https://github.com/KaramBelmoujoud/Spectra-Inspector/releases/tag/v0.1.0
