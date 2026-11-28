@@ -13,6 +13,7 @@ import time
 from typing import List, Optional
 
 from .core.node import Node
+from .core.script import Recording
 from .driver import Driver
 from .service import Service
 
@@ -135,9 +136,8 @@ class Spectra:
             raise ElementNotFound(f"could not heal {selector!r}")
         return Healed(Element(self, hit.node), hit.selector, hit.confidence, hit.why)
 
-    def recording(self) -> "Recording":
+    def recording(self) -> Recording:
         """Start a script. ``recording.click(element)`` stores the selector the generator would write."""
-        from .core.script import Recording
 
         def generate(node):
             return self.driver.call(lambda: self.service.engine.generate(node)[0].to_text())
